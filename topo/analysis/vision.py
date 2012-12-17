@@ -279,7 +279,7 @@ class measure_and_analyze_complexity(measure_sine_pref):
     """Macro for measuring orientation preference and then analyzing its complexity."""
     def __call__(self,**params):
         fm = super(measure_and_analyze_complexity,self).__call__(**params)
-        #analyze_complexity(fm,simple_sheet_name="V1Simple",complex_sheet_name="V1Complex",filename="ModulationRatio")
+        analyze_complexity(fm,simple_sheet_name="V1Simple",complex_sheet_name="V1Complex",filename="ModulationRatio")
         return fm
 
 pg= create_plotgroup(name='Orientation Preference and Complexity',category="Preference Maps",
