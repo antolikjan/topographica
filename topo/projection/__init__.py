@@ -19,7 +19,7 @@ from topo.base.projection import Projection
 from topo.base.boundingregion import BoundingBox
 from topo.base.sheet import activity_type
 from topo.base.sheetcoords import Slice
-from topo.base.cf import CFProjection,ConnectionField,MaskedCFIter,\
+from topo.base.cf import CFProjection,ConnectionField,\
      CFPLearningFn,CFPLF_Identity,CFPOutputFn,CFIter,ResizableCFProjection
 from topo.base.patterngenerator import PatternGenerator,Constant
 from topo.base.functionfamily import CoordinateMapperFn,IdentityMF
@@ -143,10 +143,9 @@ class SharedWeightCFProjection(CFProjection):
 
 
     def _create_cf(self,x,y):
-        x_cf,y_cf = self.coord_mapper(x,y)
         # Does not pass the mask, as it would have to be sliced
         # for each cf, and is only used for learning.
-        CF = SharedWeightCF(self.__sharedcf,self.src,x=x_cf,y=y_cf, #JUDE ADDED
+        CF = SharedWeightCF(self.__sharedcf,self.src,x=x,y=y,
                             template=self._slice_template,
                             min_matrix_radius=self.min_matrix_radius,
                             mask=self.mask_template)
@@ -286,7 +285,7 @@ class ScaledCFProjection(CFProjection):
         if self.lr_sf is None:
             self.lr_sf=ones(self.dest.shape, activity_type)
 
-        self.response_fn(MaskedCFIter(self), input_activity, self.activity, self.strength)
+        self.response_fn(CFIter(self), input_activity, self.activity, self.strength)
         for of in self.output_fns:
             of(self.activity)
         self.calculate_sf()

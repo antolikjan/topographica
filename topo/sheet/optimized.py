@@ -4,7 +4,7 @@ Inline-optimized Sheet classes
 
 import param
 
-from topo.base.cf import MaskedCFIter
+from topo.base.cf import CFIter
 from topo.base.projection import NeighborhoodMask
 from topo.misc.inlinec import inline,provide_unoptimized_equivalent,c_header
 from topo.sheet.lissom import LISSOM
@@ -21,7 +21,7 @@ def compute_joint_norm_totals_opt(projlist,active_units_mask):
     assert length>=1
 
     proj = projlist[0]
-    iterator = MaskedCFIter(proj,active_units_mask=active_units_mask)
+    iterator = CFIter(proj,active_units_mask=active_units_mask)
     num_cfs = len(proj.flatcfs)  # pyflakes:ignore (passed to weave C code)
     active_units_mask = iterator.get_active_units_mask()
     sheet_mask = iterator.get_sheet_mask()  # pyflakes:ignore (passed to weave C code)
@@ -33,6 +33,9 @@ def compute_joint_norm_totals_opt(projlist,active_units_mask):
     code = c_header + """
         DECLARE_SLOT_OFFSET(_norm_total,cf_type);
         DECLARE_SLOT_OFFSET(_has_norm_total,cf_type);
+        DECLARE_SLOT_OFFSET(weights,cf_type);
+        DECLARE_SLOT_OFFSET(input_sheet_slice,cf_type);
+        DECLARE_SLOT_OFFSET(mask,cf_type);
 
         npfloat *x = active_units_mask;
         npfloat *m = sheet_mask;
@@ -46,10 +49,18 @@ def compute_joint_norm_totals_opt(projlist,active_units_mask):
                     PyObject *proj = PyList_GetItem(projlist,p);
                     PyObject *cfs = PyObject_GetAttrString(proj,"flatcfs");
                     PyObject *cf = PyList_GetItem(cfs,r);
-                    PyObject *o = PyObject_GetAttrString(cf,"norm_total");
-                    nt += PyFloat_AsDouble(o);
+                    LOOKUP_FROM_SLOT_OFFSET(int,_has_norm_total,cf);
+                    LOOKUP_FROM_SLOT_OFFSET(double,_norm_total,cf);
+                    if (_has_norm_total[0] == 0) {
+                        LOOKUP_FROM_SLOT_OFFSET(float,weights,cf);
+                        LOOKUP_FROM_SLOT_OFFSET(int,input_sheet_slice,cf);
+
+                        UNPACK_FOUR_TUPLE(int,rr1,rr2,cc1,cc2,input_sheet_slice);
+
+                        SUM_NORM_TOTAL(cf,weights,_norm_total,rr1,rr2,cc1,cc2);
+                    }
+                    nt += _norm_total[0];
                     Py_DECREF(cfs);
-                    Py_DECREF(o);
                 }
 
                 for(int p=0; p<length; p++) {

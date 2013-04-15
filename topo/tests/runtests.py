@@ -3,26 +3,13 @@ Commands that were in the Makefile for running various tests. Roughly
 converted to a Python script so we can run on all platforms. Work in
 progress.
 
-Buildbot shows how to run the tests, but here are some examples:
-
-unit:
-./topographica -p 'targets=["unit"]' topo/tests/runtests.py
+Check README and buildbot to see how to run the tests, but here are some examples:
 
 default set:
 ./topographica topo/tests/runtests.py
 
 all:
 ./topographica -p 'targets=["all"]' topo/tests/runtests.py
-
-Ideally, the 'unit' target (i.e. unit tests) would be all that people
-need to run. Developers, for checking they haven't messed obvious
-stuff up. Users, for checking a Topographica installation functions ok
-on their system. The other, slower targets would only need to be run
-by buildbot (on behalf of everyone).
-
-Unfortunately, the unit tests do not currently cover enough! It's an
-important project to improve them. Until then, the default is to run
-more of the tests (but not all, since that takes too long).
 """
 
 # CEBALERT: need to fix the issue with global_params reporting name=X
@@ -51,21 +38,13 @@ from topo.misc.commandline import global_params as p
 p.add(
     targets = param.List(default=[],doc="Leave empty for default set, ['all'] for all tests except speedtests, ['speed'] for speed tests, or else list the targets required."),
 
-    coverage = param.Boolean(default=False),
-
     timing = param.Boolean(default=False),
 
-    testdp = param.Number(default=7),
+    testdp = param.Number(default=6),
 
     testdp_unopt = param.Number(default=5)
 
     )
-
-
-if p.coverage:
-    coverage_cmd = "coverage run --rcfile=doc/buildbot/coveragerc -a -p"
-else:
-    coverage_cmd = ""
 
 if p.timing:
     timing_cmd = "/usr/bin/time"
@@ -98,7 +77,7 @@ else:
 
 if len(p.targets)==0:
     # DEFAULT
-    p.targets = ['unit','traintests','snapshots','gui','maptests'] # maptests wouldn't be default except it's caught platform different problems before (there aren't enough unit tests!)
+    p.targets = ['traintests','snapshots','gui','maptests'] # maptests wouldn't be default except it's caught platform different problems before (there aren't enough unit tests!)
 
 # Allow allsnapshottests as shortcut for snapshots and pickle.
 # CEBALERT: should just combine these tests anyway.
@@ -110,7 +89,7 @@ if "allsnapshottests" in p.targets:
 # ->params ?
 tests_dir = param.resolve_path("topo/tests",path_to_file=False)
 scripts_dir = param.resolve_path(".",path_to_file=False) ### XXX
-topographica_script = xvfb + " " + timing_cmd + coverage_cmd + " " + sys.argv[0] + " " +  " "
+topographica_script = xvfb + " " + timing_cmd + " " + sys.argv[0] + " " +  " "
 
 def _runc(cmd):
     print cmd
@@ -170,7 +149,7 @@ for script in TRAINSCRIPTS:
 target['unopttraintests'] = []
 for script in TRAINSCRIPTS:
     script_path = os.path.join(scripts_dir,script)
-    target['unopttraintests'].append(topographica_script + " -c 'import_weave=False'" +  " -c 'from topo.tests.test_script import test_script; test_script(script=\"%(script_path)s\",decimal=%(dp)s)'"%dict(script_path=script_path,dp=p.testdp_unopt))
+    target['unopttraintests'].append(topographica_script + " -c \"import_weave=False\"" +  " -c \"from topo.tests.test_script import test_script; test_script(script=%(script_path)s,decimal=%(dp)s)\""%dict(script_path=repr(script_path),dp=p.testdp_unopt))
 
 
 speedtarget['speedtests'] = []
@@ -223,15 +202,21 @@ target['pickle'].append(topographica_script + '''-l -c "from topo.tests.test_scr
 # CEBALERT: hack that this will always be created even when test not being run
 # DSALERT: also it's not portable; python has a tempfile module that should
 # easily be able to replace this
-tmpd = commands.getoutput("mktemp -d")
+
+temp_dir = ""
+if "scriptrepr" in p.targets or "all" in p.targets:
+    from tempfile import mkdtemp
+    temp_dir = mkdtemp()
+    temp_dir = temp_dir.replace("\\", "\\\\")
+
 #script-repr-tests:
 target['scriptrepr']=[]
 script = os.path.join(scripts_dir,"examples/hierarchical.ty")
-target['scriptrepr'].append(topographica_script + " %(script)s -a -c \"import param;param.normalize_path.prefix='%(tmpd)s'\" -c \"save_script_repr('script_repr_test.ty')\""%dict(tmpd=tmpd,script=script))
+target['scriptrepr'].append(topographica_script + " %(script)s -a -c \"import param;param.normalize_path.prefix='%(temp_dir)s'\" -c \"save_script_repr('script_repr_test.ty')\""%dict(temp_dir=temp_dir,script=script))
 
-script_repr_test_path = os.path.join(tmpd,"script_repr_test.ty")
+script_repr_test_path = os.path.join(temp_dir,"script_repr_test.ty")
 target['scriptrepr'].append(topographica_script + " " + script_repr_test_path)
-target['scriptrepr'].append(topographica_script + "-c \"import shutil;shutil.rmtree('%s')\""%tmpd)
+target['scriptrepr'].append(topographica_script + "-c \"import shutil;shutil.rmtree('%s')\""%temp_dir)
 
 
 ### GUI tests
@@ -245,10 +230,6 @@ target['gui'].append(topographica_script + ' -g -c "from topo.tests.gui_tests im
 
 target['batch'] = []
 target['batch'].append(topographica_script + ' -c "from topo.tests.test_script import test_runbatch; test_runbatch()"')
-
-
-target['unit'] = []
-target['unit'].append(topographica_script + ' -c "import topo.tests; t=topo.tests.run(); import sys; sys.exit(len(t.failures+t.errors))"')
 
 
 # CEBALERT: should use lissom.ty and test more map types

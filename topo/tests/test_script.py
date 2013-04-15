@@ -2,7 +2,7 @@
 Contains tests to check a particular script's results or speed have
 not changed.
 
-Buildbot shows how to run all these tests.
+Check README and buildbot to see how all these tests are run.
 """
 
 
@@ -15,9 +15,10 @@ from param import resolve_path, normalize_path
 
 import topo
 
+from nose.tools import nottest
 
 # CEBALERT: should get this from somewhere else!
-TOPOGRAPHICAHOME = os.path.join(os.path.expanduser("~"),"topographica")
+TOPOGRAPHICAHOME = os.path.join(os.path.expanduser("~"),"Topographica")
 
 TESTSDATADIR = os.path.join(TOPOGRAPHICAHOME,"tests")
 if not os.path.exists(TESTSDATADIR):
@@ -32,7 +33,7 @@ MACHINETESTSDATADIR = os.path.join(TESTSDATADIR,socket.gethostname())
 if not os.path.exists(MACHINETESTSDATADIR):
     os.makedirs(MACHINETESTSDATADIR)
 
-FIXEDDATADIR = resolve_path("topo/tests",path_to_file=False)
+FIXEDDATADIR = resolve_path("topo/tests/data_traintests",path_to_file=False)
 
 
 
@@ -62,14 +63,11 @@ def _setargs(args):
 # simulation time, etc).
 # CEBALERT: is this somehow causing func to run more slowly than
 # without forking?
+from multiprocessing import Process
 def _run_in_forked_process(func, *args, **kwds):
-    # DSALERT: os.fork() is not supported on Windows
-    pid = os.fork()
-    if pid > 0:
-        os.waitpid(pid, 0)
-    else:
-        func(*args, **kwds)
-        os._exit(0)
+    p = Process(target=func(*args, **kwds))
+    p.start()
+    p.join()
 
 
 def _instantiate_everything(
@@ -164,7 +162,7 @@ def _generate_data(script,data_filename,look_at='V1',run_for=[1,99,150],**args):
     pickle.dump(data,open(data_filename,'wb'),2)
 
 
-
+@nottest
 def test_script(script,decimal=None):
     """
     Run script with the parameters specified when its DATA file was
@@ -191,7 +189,8 @@ def test_script(script,decimal=None):
         locn = resolve_path(data_filename_only,search_paths=[FIXEDDATADIR,TESTSDATADIR])
     except IOError:
         print "No existing data"
-        _run_in_forked_process(_generate_data,script,data_filename,run_for=RUN_FOR,cortex_density=TRAINTESTS_CORTEXDENSITY,lgn_density=LGN_DENSITY,retina_density=RETINA_DENSITY)
+        #_run_in_forked_process(_generate_data,script,data_filename,run_for=RUN_FOR,cortex_density=TRAINTESTS_CORTEXDENSITY,lgn_density=LGN_DENSITY, retina_density=RETINA_DENSITY)
+        _generate_data(script,data_filename,run_for=RUN_FOR,cortex_density=TRAINTESTS_CORTEXDENSITY,lgn_density=LGN_DENSITY,retina_density=RETINA_DENSITY)
         locn = resolve_path(data_filename)
 
     print "Reading data from %s"%locn
@@ -306,8 +305,8 @@ def compare_speed_data(script):
         locn = resolve_path(data_filename)
     except IOError:
         print "No existing data"
-        _run_in_forked_process(_generate_speed_data,script,data_filename,iterations=SPEEDTESTS_ITERATIONS,cortex_density=SPEEDTESTS_CORTEXDENSITY)
-        #_generate_speed_data(script,data_filename,iterations=SPEEDTESTS_ITERATIONS,cortex_density=SPEEDTESTS_CORTEXDENSITY)
+        #_run_in_forked_process(_generate_speed_data,script,data_filename,iterations=SPEEDTESTS_ITERATIONS,cortex_density=SPEEDTESTS_CORTEXDENSITY)
+        _generate_speed_data(script,data_filename,iterations=SPEEDTESTS_ITERATIONS,cortex_density=SPEEDTESTS_CORTEXDENSITY)
         locn = resolve_path(data_filename)
 
     print "Reading data from %s"%locn
@@ -392,6 +391,8 @@ def compare_startup_speed_data(script):
     MACHINETESTSDATADIR/script_name.ty_STARTUPSPEEDDATA (i.e. to
     generate new data, delete the existing data before running).
     """
+    script = script.replace("\\", "\\\\")
+    
     print "Comparing startup speed data for %s"%script
 
     script_name = os.path.basename(script)
@@ -401,8 +402,8 @@ def compare_startup_speed_data(script):
         locn = resolve_path(data_filename)
     except IOError:
         print "No existing data"
-        _run_in_forked_process(_generate_startup_speed_data,script,data_filename,cortex_density=SPEEDTESTS_CORTEXDENSITY)
-        #_generate_startup_speed_data(script,data_filename,cortex_density=SPEEDTESTS_CORTEXDENSITY)
+        #_run_in_forked_process(_generate_startup_speed_data,script,data_filename,cortex_density=SPEEDTESTS_CORTEXDENSITY)
+        _generate_startup_speed_data(script,data_filename,cortex_density=SPEEDTESTS_CORTEXDENSITY)
         locn = resolve_path(data_filename)
 
     print "Reading data from %s"%locn
@@ -623,6 +624,7 @@ def pickle_unpickle_everything(existing_pickles=None):
 
 ###########################################################################
 # basic test of run batch
+@nottest
 def test_runbatch():
     from topo.misc.genexamples import find_examples
     from topo.command import run_batch

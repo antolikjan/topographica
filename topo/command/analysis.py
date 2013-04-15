@@ -26,7 +26,7 @@ import Image,ImageDraw
 import copy
 
 from numpy.oldnumeric import array, maximum
-from numpy import pi, sin, cos, nonzero, round, linspace
+from numpy import pi, sin, cos, nonzero, round, linspace, floor, ceil
 
 import param
 from param.parameterized import ParameterizedFunction
@@ -202,8 +202,8 @@ def decode_feature(sheet, preference_map = "OrientationPreference", axis_bounds=
         topo.sim.warning(preference_map + " should be measured before calling decode_feature.")
     else:
         v = sheet.sheet_views[preference_map]
-        d.add(dict(zip(cropfn(v.view()[0]).ravel(),
-                       cropfn(sheet.activity).ravel())))
+        for (p,a) in zip(cropfn(v.view()[0]).ravel(),
+                         cropfn(sheet.activity).ravel()): d.add({p:a})
 
     res = DSF_WeightedAverage()(d) if weighted_average else DSF_MaxValue()(d)
     return res['']['preference']
@@ -323,34 +323,32 @@ class measure_rfs(SingleInputResponseCommand):
     """
     Map receptive fields by reverse correlation.
 
-    Presents a large collection of input patterns, typically pixel
-    by pixel on and off, keeping track of which units in the specified
-    input_sheet were active when each unit in other Sheets in the
-    simulation was active.  This data can then be used to plot
-    receptive fields for each unit.  Note that the results are true
-    receptive fields, not the connection fields usually presented in
-    lieu of receptive fields, because they take all circuitry in
+    Presents a large collection of input patterns, typically pixel by pixel on
+    and off, keeping track of which units in the specified input_sheet were
+    active when each unit in other Sheets in the simulation was active.  This
+    data can then be used to plot receptive fields for each unit.  Note that
+    the results are true receptive fields, not the connection fields usually
+    presented in lieu of receptive fields, because they take all circuitry in
     between the input and the target unit into account.
 
-    Note also that it is crucial to set the scale parameter properly when
-    using units with a hard activation threshold (as opposed to a
-    smooth sigmoid), because the input pattern used here may not be a
-    very effective way to drive the unit to activate.  The value
-    should be set high enough that the target units activate at least
-    some of the time there is a pattern on the input.
+    Note also that it is crucial to set the scale parameter properly when using
+    units with a hard activation threshold (as opposed to a smooth sigmoid),
+    because the input pattern used here may not be a very effective way to
+    drive the unit to activate.  The value should be set high enough that the
+    target units activate at least some of the time there is a pattern on the
+    input.
     """
     static_parameters = param.List(default=["offset","size"])
 
-    sampling = param.Number(default=1.0,bounds=(1.0,None),doc="""
-    	The sampling value determines the size of the input pattern and
-    	the number of presentations required to fully sample the input sheet.
-    	The higher the value the coarser the receptive field measurement
-    	will be.""")
+    sampling_interval = param.Integer(default=1,bounds=(1,None),doc="""
+    	The sampling interval determines the number of units in the input sheet
+    	that are sampled per presentation.  The higher the value the coarser
+    	the receptive field measurement will be.""")
 
-    area_ratio = param.Number(default=1.0,bounds=(0.0,1.0),doc="""
-    	Ratio defining the area in the input sheet that is sampled during
-    	the reverse correlation procedure. Reducing this value below 1.0
-    	will invalidate the RFs of all neurons outside the specified area.""")
+    sampling_area = param.NumericTuple(doc="""
+    	Dimensions of the area to be sampled during reverse correlation
+        measured in units x and y on the input sheet centered around the origin
+        and expressed as a tuple (x,y).""")
 
     __abstract = True
 
@@ -369,23 +367,20 @@ class measure_rfs(SingleInputResponseCommand):
     def _feature_list(self,p):
 
         left, bottom, right, top = p.input_sheet.nominal_bounds.lbrt()
-        left *= p.area_ratio; bottom *= p.area_ratio; right *= p.area_ratio; top *= p.area_ratio
         sheet_density = float(p.input_sheet.nominal_density)
+        x_units,y_units = p.input_sheet.shape
 
-        # Cannot assume square sheet.
-        vertical_divisions = ((sheet_density * (top - bottom)) - 1) / p.sampling
-        horizontal_divisions = ((sheet_density * (right - left)) - 1) / p.sampling
+        unit_size = 1.0 / sheet_density
+        p.size = unit_size * p.sampling_interval
 
-        unit_size = 1.0 / sheet_density * p.sampling
-        half_unit_size = unit_size / 2.0 # saves repeated calculation.
-        p['size'] = unit_size
+        if p.sampling_area == (0,0):
+            p.sampling_area = (x_units,y_units)
 
-        # Set the x and y max values down by half a unit so patterns are presented in the centre of each unit.
-        y_range = (top - half_unit_size, bottom)
-        x_range = (right - half_unit_size, left)
+        y_range = (top - (unit_size * floor((y_units-p.sampling_area[1])/2)), bottom + (unit_size * ceil((y_units-p.sampling_area[1])/2)))
+        x_range = (right - (unit_size * floor((x_units-p.sampling_area[0])/2)), left + (unit_size * ceil((x_units-p.sampling_area[0])/2)))
 
-        return [Feature(name="x", range=x_range, step=float(x_range[1]-x_range[0])/horizontal_divisions),
-                Feature(name="y", range=y_range, step=float(y_range[1]-y_range[0])/vertical_divisions),
+        return [Feature(name="x", range=x_range, step=-p.size),
+                Feature(name="y", range=y_range, step=-p.size),
                 Feature(name="scale", range=(-p.scale, p.scale), step=p.scale*2)]
 
 pg = create_plotgroup(name='RF Projection',category='Other',
@@ -646,6 +641,13 @@ class measure_dr_pref(SinusoidalMeasureResponseCommand):
 
     subplot = param.String("Direction")
 
+    preference_fn = param.ClassSelector( DistributionStatisticFn,
+        default=DSF_WeightedAverage(value_scale=(0.0,1.0/(2*pi))), doc="""
+        Function that will be used to analyze the distributions of
+        unit responses. Sets value_scale to normalize direction
+        preference values.""" )
+
+
     def _feature_list(self,p):
         # orientation is computed from direction
         dr = Feature(name="direction",range=(0.0,2*pi),step=2*pi/p.num_direction,cyclic=True)
@@ -654,7 +656,8 @@ class measure_dr_pref(SinusoidalMeasureResponseCommand):
         return [Feature(name="speed",values=[0],cyclic=False) if p.num_speeds is 0 else
                 Feature(name="speed",range=(0.0,p.max_speed),step=float(p.max_speed)/p.num_speeds,cyclic=False),
                 Feature(name="frequency",values=p.frequencies),
-                Feature(name="direction",range=(0.0,2*pi),step=2*pi/p.num_direction,cyclic=True),
+                Feature(name="direction",range=(0.0,2*pi),step=2*pi/p.num_direction,cyclic=True,
+                        preference_fn=self.preference_fn),
                 Feature(name="phase",range=(0.0,2*pi),step=2*pi/p.num_phase,cyclic=True),
                 Feature(name="orientation",range=(0.0,pi),values=or_values,cyclic=True,
                         compute_fn=compute_orientation_from_direction)]
