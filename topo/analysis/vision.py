@@ -76,10 +76,6 @@ def complexity(full_matrix):
     res = 0.0
     average = 0.0
 
-    print "Z"
-    print size(full_matrix.features)
-    print full_matrix.features[0].values
-
     for x in range(rows):
         for y in range(cols):
             complex_matrix[x,y] = []#
