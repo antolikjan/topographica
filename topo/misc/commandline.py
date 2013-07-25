@@ -560,7 +560,6 @@ def process_argv(argv):
     if (openmp_min_threads is None): openmp_min_threads=2
 
     openmp_max_threads = __main__.__dict__.get('openmp_max_threads')
-
     if (openmp_threads != 1): # OpenMP is disabled if openmp_threads == 1
 
         (num_threads, total_cores) = get_omp_num_threads(openmp_threads,

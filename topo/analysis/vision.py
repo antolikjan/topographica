@@ -113,7 +113,7 @@ def complexity(full_matrix):
                 pylab.plot(z,linewidth=4)
 		pylab.axis(xmin=0.0,xmax=numpy.pi)
 		ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
-		pylab.xticks([0,len(z)/2,len(z)-1], ['0','pi/2','pi'])
+		#pylab.xticks([0,len(z)/2,len(z)-1], ['0','pi/2','pi'])
 		pylab.savefig(normalize_path(str(topo.sim.time()) + str(complex_matrix[x,y][0])+ 'modulation_response[43,43].png'))
 
             if x==45 and y==45:
@@ -124,7 +124,7 @@ def complexity(full_matrix):
                 pylab.plot(z,linewidth=4)
 		pylab.axis(xmin=0.0,xmax=numpy.pi)
 		ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(4))
-		pylab.xticks([0,len(z)/2,len(z)-1], ['0','pi/2','pi'])
+		#pylab.xticks([0,len(z)/2,len(z)-1], ['0','pi/2','pi'])
 		pylab.savefig(normalize_path(str(topo.sim.time()) + str(complex_matrix[x,y][0])+ 'modulation_response[45,45].png'))
 		
             fft = numpy.fft.fft(complex_matrix[x,y]+complex_matrix[x,y]+complex_matrix[x,y]+complex_matrix[x,y],2048)
@@ -269,11 +269,11 @@ def analyze_complexity(full_matrix,simple_sheet_name,complex_sheet_name,filename
     topo.command.pylabplot.plot_modulation_ratio(full_matrix,simple_sheet_name=simple_sheet_name,complex_sheet_name=complex_sheet_name,filename=filename)
 
     # Avoid error if no simple sheet exists
-    try:
-        phase_preference_scatter_plot(simple_sheet_name,diameter=0.24999)
-    except AttributeError:
-        print "Skipping phase preference scatter plot; could not analyze region %s." \
-              % simple_sheet_name
+    #try:
+    #    phase_preference_scatter_plot(simple_sheet_name,diameter=0.24999)
+    #except AttributeError:
+    #    print "Skipping phase preference scatter plot; could not analyze region %s." \
+    #          % simple_sheet_name
 
 class measure_and_analyze_complexity(measure_sine_pref):
     """Macro for measuring orientation preference and then analyzing its complexity."""
