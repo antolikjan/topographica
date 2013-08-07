@@ -234,7 +234,7 @@ class FeatureResponses(PatternDrivenAnalysis):
             topo.guimain.open_progress_window(timer)
         else:
             self.verbose("Presenting %d test patterns (%s)." % (len(self.permutations),values_description))
-
+        
         timer.call_fixed_num_times(self.permutations)
 
         # Run hooks after the analysis session
@@ -271,7 +271,7 @@ class FeatureResponses(PatternDrivenAnalysis):
 
         for sheet in self.sheets_to_measure():
             self._activities[sheet]=self._activities[sheet] / self.repetitions
-
+            
         self._update(complete_settings)
 
     def _update(self,current_values):

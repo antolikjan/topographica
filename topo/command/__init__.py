@@ -180,6 +180,7 @@ def restore_input_generators():
 
 def clear_event_queue():
     """Remove pending events from the simulator's event queue."""
+    print "clearing events"
     topo.sim.event_clear()
 
 

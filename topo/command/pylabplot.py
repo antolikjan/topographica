@@ -624,6 +624,7 @@ class tuning_curve(PylabPlotCommand):
         """Return the x, y, and x ticks values for the specified curve from the curve_dict"""
         x_values=sorted(curve.keys())
         y_values=[curve[key].view()[0][i_value,j_value] for key in x_values]
+        
         return x_values,y_values,x_values
 
     def _reduce_ticks(self,ticks):
@@ -1221,6 +1222,10 @@ class measure_orientation_contrast(UnitCurveCommand):
     orientation_center = param.Number(default=0.0,softbounds=(0.0,numpy.pi),doc="""
         Orientation of the center grating patch""")
 
+    phasecenter = param.Number(default=0.0,softbounds=(0.0,2*numpy.pi),doc="""
+        Phase of the center grating patch""")
+
+
     units = param.String(default="%")
 
     static_parameters = param.List(default=["x","y","sizecenter","sizesurround","orientationcenter","thickness","contrastcenter"])
@@ -1241,7 +1246,6 @@ class measure_orientation_contrast(UnitCurveCommand):
 
             for i in xrange(0,self.num_orientation):
                 self.or_surrounds.append(orientation+i*pi/(self.num_orientation))
-
             self.x=self._sheetview_unit(sheet,coord,'XPreference',default=coord[0])
             self.y=self._sheetview_unit(sheet,coord,'YPreference',default=coord[1])
 
