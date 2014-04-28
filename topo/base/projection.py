@@ -458,10 +458,8 @@ class ProjectionSheet(Sheet):
         Subclasses may override this method to whatever it means to
         calculate activity in that subclass.
         """
-
         self.activity *= 0.0
         tmp_dict={}
-
         for proj in self.in_connections:
             if (proj.activity_group != None) | (proj.dest_port[0] != 'Activity'):
                 if not tmp_dict.has_key(proj.activity_group[0]):
@@ -476,11 +474,10 @@ class ProjectionSheet(Sheet):
             for proj in tmp_dict[priority]:
                 tmp_activity += proj.activity
             self.activity=tmp_dict[priority][0].activity_group[1](self.activity,tmp_activity)
-
+            
         if self.apply_output_fns:
             for of in self.output_fns:
                 of(self.activity)
-
         self.send_output(src_port='Activity',data=self.activity)
 
 

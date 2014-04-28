@@ -43,7 +43,7 @@ from topo.plotting.plot import make_template_plot
 import param
 from param import ParameterizedFunction,normalize_path
 from param.parameterized import ParamOverrides
-from topo.pattern import SineGrating, OrientationContrast
+from topo.pattern import SineGrating, OrientationContrast, SineGratingDisk
 from topo.plotting.plotgroup import create_plotgroup
 from topo.base.cf import CFSheet
 
@@ -1099,6 +1099,10 @@ class measure_size_response(UnitCurveCommand):
 
     x_axis = param.String(default='size',constant=True)
 
+    pattern_presenter = param.Callable(
+        default=PatternPresenter(pattern_generator=SineGratingDisk(),
+                                 contrast_parameter="scale"))
+
 
     def __call__(self,**params):
         p=ParamOverrides(self,params)
@@ -1200,7 +1204,7 @@ class measure_orientation_contrast(UnitCurveCommand):
 
     pattern_presenter = param.Callable(
         default=PatternPresenter(pattern_generator=OrientationContrast(),
-                                 contrast_parameter="weber_contrast"))
+                                 contrast_parameter="scale"))
 
     size=None # Disabled unused parameter
     # Maybe instead of the below, use size and some relative parameter, to allow easy scaling?
