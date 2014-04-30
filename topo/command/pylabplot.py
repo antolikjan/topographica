@@ -1047,6 +1047,10 @@ class measure_or_tuning(UnitCurveCommand):
 
     static_parameters = param.List(default=["size","x","y"])
 
+    pattern_presenter = param.Callable(
+        default=PatternPresenter(pattern_generator=SineGratingDisk(),
+                                 contrast_parameter="scale"))
+
     def __call__(self,**params):
         p=ParamOverrides(self,params)
         self.params('sheet').compute_default()

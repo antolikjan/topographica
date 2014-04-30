@@ -832,7 +832,7 @@ class PatternPresenter(param.Parameterized):
             elif self.contrast_parameter=='scale':
                 for g in inputs.itervalues():
                     g.offsetcenter=0.0
-                    g.scalecenter=g.contrastcenter
+                    g.scalecenter=g.contrastcenter/100.0
 
         if features_values.has_key("contrastsurround")or param_dict.has_key("contrastsurround"):
             if self.contrast_parameter=='michelson_contrast':
@@ -852,7 +852,7 @@ class PatternPresenter(param.Parameterized):
             elif self.contrast_parameter=='scale':
                 for g in inputs.itervalues():
                     g.offsetsurround=0.0
-                    g.scalesurround=g.contrastsurround
+                    g.scalesurround=g.contrastsurround/100.0
 
         if features_values.has_key("contrast") or param_dict.has_key("contrast"):
             if self.contrast_parameter=='michelson_contrast':
@@ -872,7 +872,7 @@ class PatternPresenter(param.Parameterized):
             elif self.contrast_parameter=='scale':
                 for g in inputs.itervalues():
                     g.offset=0.0
-                    g.scale=g.contrast
+                    g.scale=g.contrast/100.0
 
         # blank patterns for unused generator sheets
         for sheet_name in set(all_input_sheet_names).difference(set(input_sheet_names)):
